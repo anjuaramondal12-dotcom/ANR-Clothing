@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ANR Clothing</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f6f6f6;color:#111}
+header{position:sticky;top:0;z-index:10;background:#111;color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+.logo{font-size:22px;font-weight:800;letter-spacing:1px}.actions button{margin-left:6px}
+button{border:0;border-radius:8px;padding:10px 14px;font-weight:700;cursor:pointer}
+.primary{background:#111;color:#fff}.light{background:#fff;color:#111}.green{background:#16a34a;color:#fff}
+.hero{padding:45px 20px;text-align:center;background:linear-gradient(135deg,#111,#333);color:#fff}
+.hero h1{font-size:38px;margin:5px}.hero p{margin:10px 0 0}.wrap{max-width:1100px;margin:auto;padding:24px 16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}
+.card{background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 3px 14px #0001}.card img{width:100%;height:270px;object-fit:cover;background:#eee}
+.info{padding:15px}.price{font-size:20px;font-weight:800;margin:8px 0}.row{display:flex;gap:8px;flex-wrap:wrap}.row button{flex:1}
+.modal{display:none;position:fixed;inset:0;background:#0008;z-index:20;padding:20px;overflow:auto}
+.box{background:#fff;max-width:500px;margin:40px auto;padding:22px;border-radius:14px}.close{float:right;background:#eee}
+input,select{width:100%;padding:12px;margin:7px 0 12px;border:1px solid #ccc;border-radius:8px}
+.cart-item{padding:10px 0;border-bottom:1px solid #eee}.note{background:#fff8d9;padding:10px;border-radius:8px;margin:10px 0}
+#recaptcha-container{margin:8px 0}footer{text-align:center;padding:30px;background:#111;color:#fff;margin-top:30px}
+</style>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+</head>
+<body>
+
+<header>
+  <div class="logo">ANR CLOTHING</div>
+  <div class="actions">
+    <button class="light" onclick="contact()">Contact</button>
+    <button class="light" onclick="openCart()">🛒 Cart <span id="cartCount">0</span></button>
+  </div>
+</header>
+
+<section class="hero">
+  <h1>ANR CLOTHING</h1>
+  <p>নিজের স্টাইল, নিজের পরিচয়।</p>
+  <p>Premium Oversized T-Shirts</p>
+</section>
+
+<main class="wrap">
+<h2>Our Collection</h2>
+<div class="grid">
+<div class="card">
+<img src="https://placehold.co/700x800/111/fff?text=ANR+BLACK+T-SHIRT" alt="ANR Black T-Shirt">
+<div class="info"><h3>ANR Oversized T-Shirt — Black</h3><div class="price">₹499</div>
+<div class="row"><button class="primary" onclick="add('ANR Black T-Shirt',499)">Add to Cart</button><button class="green" onclick="buyNow('ANR Black T-Shirt',499)">Buy Now</button></div></div>
+</div>
+
+<div class="card">
+<img src="https://placehold.co/700x800/eee/111?text=ANR+WHITE+T-SHIRT" alt="ANR White T-Shirt">
+<div class="info"><h3>ANR Oversized T-Shirt — White</h3><div class="price">₹499</div>
+<div class="row"><button class="primary" onclick="add('ANR White T-Shirt',499)">Add to Cart</button><button class="green" onclick="buyNow('ANR White T-Shirt',499)">Buy Now</button></div></div>
+</div>
+
+<div class="card">
+<img src="https://placehold.co/700x800/444/fff?text=ANR+PREMIUM" alt="ANR Premium T-Shirt">
+<div class="info"><h3>ANR Oversized T-Shirt — Premium</h3><div class="price">₹599</div>
+<div class="row"><button class="primary" onclick="add('ANR Premium T-Shirt',599)">Add to Cart</button><button class="green" onclick="buyNow('ANR Premium T-Shirt',599)">Buy Now</button></div></div>
+</div>
+</div>
+</main>
+
+<div id="cartModal" class="modal"><div class="box">
+<button class="close" onclick="closeModal('cartModal')">✕</button><h2>Your Cart</h2>
+<div id="cartItems"></div><h3>Total: ₹<span id="total">0</span></h3>
+<button class="green" style="width:100%" onclick="checkout()">Checkout</button>
+</div></div>
+
+<div id="checkoutModal" class="modal"><div class="box">
+<button class="close" onclick="closeModal('checkoutModal')">✕</button><h2>Order Details</h2>
+<input id="name" placeholder="আপনার নাম">
+<input id="phone" placeholder="10-digit Indian mobile number" maxlength="10" inputmode="numeric">
+<div id="recaptcha-container"></div>
+<button class="primary" style="width:100%" id="sendOtpBtn" onclick="sendOTP()">Send OTP</button>
+
+<div id="otpArea" style="display:none">
+<input id="otp" placeholder="SMS-এ আসা 6-digit OTP" maxlength="6" inputmode="numeric">
+<button class="primary" style="width:100%" onclick="verifyOTP()">Verify OTP</button>
+</div>
+
+<div id="orderArea" style="display:none">
+<input id="address" placeholder="সম্পূর্ণ Delivery Address">
+<select id="payment">
+<option value="">Payment Method নির্বাচন করুন</option>
+<option value="Online Payment">Online Payment</option>
+<option value="Cash on Delivery">Cash on Delivery</option>
+</select>
+<div class="note">COD শুধুমাত্র 20 KM-এর মধ্যে available।</div>
+<button class="green" style="width:100%" onclick="placeOrder()">Place Order</button>
+</div>
+</div></div>
+
+<div id="contactModal" class="modal"><div class="box">
+<button class="close" onclick="closeModal('contactModal')">✕</button>
+<h2>ANR Clothing</h2><p>📞 8101799462</p><p>📸 Instagram: @anr_clothing.in</p><p>📘 Facebook: ANR Clothing</p>
+<a href="https://wa.me/918101799462" target="_blank"><button class="green" style="width:100%">WhatsApp করুন</button></a>
+</div></div>
+
+<footer>© 2026 ANR Clothing · Instagram: @anr_clothing.in · Facebook: ANR Clothing</footer>
+
+<script>
+const firebaseConfig={
+ apiKey:"AIzaSyAE2lJdexmFBTaOQ6sKrtMUIhfz-K-r8eQ",
+ authDomain:"anr-clothing.firebaseapp.com",
+ projectId:"anr-clothing",
+ storageBucket:"anr-clothing.firebasestorage.app",
+ messagingSenderId:"1078415470968",
+ appId:"1:1078415470968:web:902e60ab0f06b856f3d88d",
+ measurementId:"G-HF15RLB7JW"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+let confirmationResult=null;
+let phoneVerified=false;
+let cart=[];
+
+function add(name,price){cart.push({name,price});updateCart();alert("Cart-এ যোগ হয়েছে");}
+function buyNow(name,price){cart=[{name,price}];updateCart();checkout();}
+function updateCart(){
+ document.getElementById("cartCount").textContent=cart.length;
+ const total=cart.reduce((s,x)=>s+x.price,0);
+ document.getElementById("total").textContent=total;
+ document.getElementById("cartItems").innerHTML=cart.length?
+ cart.map((x,i)=>`<div class="cart-item">${x.name} — ₹${x.price} <button onclick="removeItem(${i})">Remove</button></div>`).join(""):
+ "Cart খালি";
+}
+function removeItem(i){cart.splice(i,1);updateCart();}
+function openCart(){document.getElementById("cartModal").style.display="block";updateCart();}
+function checkout(){
+ if(!cart.length){alert("আগে একটি product add করুন");return;}
+ closeModal("cartModal");
+ document.getElementById("checkoutModal").style.display="block";
+ setTimeout(initRecaptcha,300);
+}
+function closeModal(id){document.getElementById(id).style.display="none";}
+function contact(){document.getElementById("contactModal").style.display="block";}
+
+function initRecaptcha(){
+ if(window.recaptchaVerifier)return;
+ window.recaptchaVerifier=new firebase.auth.RecaptchaVerifier("recaptcha-container",{
+   size:"normal",
+   callback:function(){},
+   "expired-callback":function(){alert("reCAPTCHA expired. আবার verify করুন।");}
+ });
+ window.recaptchaVerifier.render();
+}
+
+async function sendOTP(){
+ const phone=document.getElementById("phone").value.trim();
+ if(!/^[6-9]\d{9}$/.test(phone)){
+   alert("সঠিক 10-digit Indian mobile number দিন");return;
+ }
+ try{
+   document.getElementById("sendOtpBtn").disabled=true;
+   initRecaptcha();
+   const appVerifier=window.recaptchaVerifier;
+   confirmationResult=await auth.signInWithPhoneNumber("+91"+phone,appVerifier);
+   document.getElementById("otpArea").style.display="block";
+   alert("OTP SMS পাঠানো হয়েছে।");
+ }catch(e){
+   console.error(e);
+   alert("OTP পাঠানো যায়নি: "+(e.message||e));
+   if(window.recaptchaVerifier){try{window.recaptchaVerifier.clear();}catch(x){}}
+   window.recaptchaVerifier=null;
+   document.getElementById("sendOtpBtn").disabled=false;
+ }
+}
+
+async function verifyOTP(){
+ const code=document.getElementById("otp").value.trim();
+ if(!confirmationResult){alert("আগে Send OTP চাপুন");return;}
+ if(!/^\d{6}$/.test(code)){alert("6-digit OTP দিন");return;}
+ try{
+   await confirmationResult.confirm(code);
+   phoneVerified=true;
+   document.getElementById("orderArea").style.display="block";
+   document.getElementById("phone").readOnly=true;
+   document.getElementById("otp").readOnly=true;
+   alert("Phone number verified successfully ✅");
+ }catch(e){
+   alert("OTP ভুল বা expired হয়েছে।");
+ }
+}
+
+function placeOrder(){
+ if(!phoneVerified){alert("আগে phone OTP verify করুন");return;}
+ const name=document.getElementById("name").value.trim();
+ const phone=document.getElementById("phone").value.trim();
+ const address=document.getElementById("address").value.trim();
+ const payment=document.getElementById("payment").value;
+ if(!name||!address||!payment){alert("সব তথ্য পূরণ করুন");return;}
+
+ const items=cart.map(x=>x.name+" ₹"+x.price).join(", ");
+ const total=cart.reduce((s,x)=>s+x.price,0);
+ const msg=`ANR CLOTHING ORDER\nName: ${name}\nPhone: ${phone}\nAddress: ${address}\nProducts: ${items}\nTotal: ₹${total}\nPayment: ${payment}`;
+ window.open("https://wa.me/918101799462?text="+encodeURIComponent(msg),"_blank");
+}
+</script>
+</body>
+</html>
